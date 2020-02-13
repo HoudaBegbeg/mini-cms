@@ -45,16 +45,25 @@ class BlogController extends AbstractController
         ]
         );
     }
-         /**
-     * @Route("/formulaire", name="formulaire")
+    
+    /**
+     * @Route("/formulaire/{id}", name="formulaire", defaults={"id"= null})
      */
-    public function new(Request $request, ArticlesRepository $articleRepository)
+    public function edit(Articles $id=null, Request $request, ArticlesRepository $articleRepository)
     {
 
         $em         = $this->getDoctrine()->getManager();
-        $article    = new Articles();
+
+        //If $article->id non connu dans la base de données creer un new article sinon recuperer l'ancien
+        try {
+            $article    = $articleRepository->find($id);
+        } catch (\Throwable $th) {
+            $article    = new Articles;
+
+        }
         $form       = $this->createForm(FormArticlesType::class, $article);
         $form->handleRequest($request);
+
         if ($form->isSubmitted() && $form->isValid()){
             $article = $form->getData();
             $em->persist($article);
@@ -64,7 +73,7 @@ class BlogController extends AbstractController
         }
         return $this->render('blog/formulaire.twig', [
             'form' => $form->createView(),
-            'articles'=>$articleRepository->findAll()
+            'articles'=>$article
         ]);
     
     }
@@ -76,6 +85,19 @@ class BlogController extends AbstractController
 
         $em = $this->getDoctrine()->getManager();
         $em->remove($id);
+        $em->flush();
+        return $this->render('blog/home.html.twig', [
+            'articles'=>$articleRepository->findAll()
+        ]);
+    }
+     /**
+     * @Route("/editer/{id}", name="editer")
+     */
+    public function editer(Articles $article, Request $request, ArticlesRepository $articleRepository)
+    {
+
+        $em = $this->getDoctrine()->getManager();
+        $em->persist($article);
         $em->flush();
         return $this->render('blog/home.html.twig', [
             'articles'=>$articleRepository->findAll()
